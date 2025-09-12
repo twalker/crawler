@@ -5,7 +5,7 @@ import (
 	"net/url"
 )
 
-func crawlPage(rawBaseURL, rawCurrentURL string, pages map[string]int) {
+func (cfg *config) crawlPage(rawBaseURL, rawCurrentURL string, pages map[string]int) {
 	currentURL, err := url.Parse(rawCurrentURL)
 	if err != nil {
 		fmt.Printf("Error - crawlPage: couldn't parse URL '%s': %v\n", rawCurrentURL, err)
@@ -16,6 +16,7 @@ func crawlPage(rawBaseURL, rawCurrentURL string, pages map[string]int) {
 		fmt.Printf("Error - crawlPage: couldn't parse URL '%s': %v\n", rawBaseURL, err)
 		return
 	}
+	cfg.baseURL = baseURL
 
 	// skip other websites
 	if currentURL.Hostname() != baseURL.Hostname() {
@@ -52,6 +53,6 @@ func crawlPage(rawBaseURL, rawCurrentURL string, pages map[string]int) {
 	}
 
 	for _, nextURL := range nextURLs {
-		crawlPage(rawBaseURL, nextURL, pages)
+		cfg.crawlPage(rawBaseURL, nextURL, pages)
 	}
 }
