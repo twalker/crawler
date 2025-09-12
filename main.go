@@ -7,14 +7,6 @@ import (
 	"sync"
 )
 
-type config struct {
-	pages              map[string]int
-	baseURL            *url.URL
-	mu                 *sync.Mutex
-	concurrencyControl chan struct{}
-	wg                 *sync.WaitGroup
-}
-
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("no website provided")
@@ -31,15 +23,15 @@ func main() {
 	}
 
 	fmt.Printf("starting crawl of: %s...\n", rawBaseURL)
-
-	pages := make(map[string]int)
-
 	cfg := config{
-		baseURL: baseURL,
+		baseURL:            baseURL,
+		pages:              make(map[string]int),
+		concurrencyControl: make(chan struct{}, 1),
+		mu:                 &sync.Mutex{},
 	}
-	cfg.crawlPage(rawBaseURL, rawBaseURL, pages)
+	cfg.crawlPage(rawBaseURL)
 
-	for normalizedURL, count := range pages {
+	for normalizedURL, count := range cfg.pages {
 		fmt.Printf("%d - %s\n", count, normalizedURL)
 	}
 }

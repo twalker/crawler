@@ -3,41 +3,44 @@ package main
 import (
 	"fmt"
 	"net/url"
+	"sync"
 )
 
-func (cfg *config) crawlPage(rawBaseURL, rawCurrentURL string, pages map[string]int) {
+type config struct {
+	pages              map[string]int
+	baseURL            *url.URL
+	mu                 *sync.Mutex
+	concurrencyControl chan struct{}
+	wg                 *sync.WaitGroup
+}
+
+func (cfg *config) crawlPage(rawCurrentURL string) {
 	currentURL, err := url.Parse(rawCurrentURL)
 	if err != nil {
 		fmt.Printf("Error - crawlPage: couldn't parse URL '%s': %v\n", rawCurrentURL, err)
 		return
+	} else {
+		fmt.Println("current URL", rawCurrentURL)
 	}
-	baseURL, err := url.Parse(rawBaseURL)
-	if err != nil {
-		fmt.Printf("Error - crawlPage: couldn't parse URL '%s': %v\n", rawBaseURL, err)
-		return
-	}
-	cfg.baseURL = baseURL
-
 	// skip other websites
-	if currentURL.Hostname() != baseURL.Hostname() {
+	if currentURL.Hostname() != cfg.baseURL.Hostname() {
 		return
 	}
 
-	normalizedURL, err := normalizeURL(rawCurrentURL)
+	// normalizedURL, err := normalizeURL(rawCurrentURL)
+	// if err != nil {
+	// 	fmt.Printf("Error - normalizedURL: %v", err)
+	// 	return
+	// }
+	normalizedURL, err := url.Parse(rawCurrentURL)
 	if err != nil {
 		fmt.Printf("Error - normalizedURL: %v", err)
 		return
 	}
-
-	// increment if visited
-	if _, visited := pages[normalizedURL]; visited {
-		pages[normalizedURL]++
+	isFirstVisit := cfg.addPageVisit(normalizedURL.String())
+	if !isFirstVisit {
 		return
 	}
-
-	// mark as visited
-	pages[normalizedURL] = 1
-
 	fmt.Printf("crawling %s\n", rawCurrentURL)
 
 	htmlBody, err := getHTML(rawCurrentURL)
@@ -46,13 +49,26 @@ func (cfg *config) crawlPage(rawBaseURL, rawCurrentURL string, pages map[string]
 		return
 	}
 
-	nextURLs, err := getURLsFromHTML(htmlBody, rawBaseURL)
+	nextURLs, err := getURLsFromHTML(htmlBody, cfg.baseURL.String())
 	if err != nil {
 		fmt.Printf("Error - getURLsFromHTML: %v", err)
 		return
 	}
 
 	for _, nextURL := range nextURLs {
-		cfg.crawlPage(rawBaseURL, nextURL, pages)
+		fmt.Println(nextURL)
+		cfg.crawlPage(nextURL)
 	}
+}
+func (cfg *config) addPageVisit(normalizedURL string) (isFirst bool) {
+	cfg.mu.Lock()
+	defer cfg.mu.Unlock()
+	if _, visited := cfg.pages[normalizedURL]; visited {
+		cfg.pages[normalizedURL]++
+		return false
+	}
+
+	// mark as visited
+	cfg.pages[normalizedURL] = 1
+	return true
 }
