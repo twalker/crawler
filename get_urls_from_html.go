@@ -1,51 +1,39 @@
 package main
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 
-	"golang.org/x/net/html"
-	"golang.org/x/net/html/atom"
+	"github.com/PuerkitoBio/goquery"
 )
 
-func getURLsFromHTML(htmlBody, rawBaseURL string) ([]string, error) {
-	var urls []string
-	h := strings.NewReader(htmlBody)
-	doc, err := html.Parse(h)
+func getURLsFromHTML(htmlBody string, baseURL *url.URL) ([]string, error) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlBody))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("couldn't parse HTML: %w", err)
 	}
 
-	for n := range doc.Descendants() {
-		if n.Type == html.ElementNode && n.DataAtom == atom.A {
-			for _, a := range n.Attr {
-				if a.Key == "href" {
-					cu, err := cleanUrl(a.Val, rawBaseURL)
-					if err != nil {
-						return nil, err
-					}
-					urls = append(urls, cu)
-					break
-				}
-			}
+	var urls []string
+	doc.Find("a[href]").Each(func(_ int, s *goquery.Selection) {
+		href, ok := s.Attr("href")
+		if !ok {
+			return
 		}
-	}
+		href = strings.TrimSpace(href)
+		if href == "" {
+			return
+		}
+
+		u, err := url.Parse(href)
+		if err != nil {
+			fmt.Printf("couldn't parse href %q: %v\n", href, err)
+			return
+		}
+
+		resolved := baseURL.ResolveReference(u)
+		urls = append(urls, resolved.String())
+	})
 
 	return urls, nil
-}
-
-func cleanUrl(u, baseUrl string) (string, error) {
-	pu, err := url.Parse(u)
-	if err != nil {
-		return "", err
-	}
-	if !strings.HasPrefix(u, "http") {
-		pu, err = url.Parse(baseUrl)
-		pu.Path = u
-
-		if err != nil {
-			return "", err
-		}
-	}
-	return pu.String(), nil
 }
