@@ -15,14 +15,8 @@ func main() {
 		return
 	}
 	rawBaseURL := os.Args[1]
-	// baseURL, err := url.Parse(rawBaseURL)
-	// if err != nil {
-	// 	fmt.Println("base url could not be parsed:", err)
-	// }
 
 	fmt.Printf("starting crawl of: %s...\n", rawBaseURL)
-
-	//cfg.crawlPage(rawBaseURL)
 
 	const maxConcurrency = 3
 	cfg, err := configure(rawBaseURL, maxConcurrency)
