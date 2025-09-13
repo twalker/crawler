@@ -24,8 +24,12 @@ func main() {
 
 	//cfg.crawlPage(rawBaseURL)
 
-	cfg := NewCrawler(rawBaseURL, 5)
-	//cfg.wg.Add(1)
+	const maxConcurrency = 3
+	cfg, err := configure(rawBaseURL, maxConcurrency)
+	if err != nil {
+		fmt.Printf("Error - configure: %v", err)
+		return
+	}
 	cfg.crawlPage(rawBaseURL)
 	cfg.wg.Wait()
 

@@ -14,19 +14,19 @@ type config struct {
 	wg                 *sync.WaitGroup
 }
 
-func NewCrawler(rawBaseURL string, maxConcurrency int) *config {
+func configure(rawBaseURL string, maxConcurrency int) (*config, error) {
 	baseURL, err := url.Parse(rawBaseURL)
 	if err != nil {
-		fmt.Println("base url could not be parsed:", err)
+		return nil, fmt.Errorf("couldn't parse base URL: %v", err)
 	}
 
 	return &config{
-		baseURL:            baseURL,
 		pages:              make(map[string]int),
-		concurrencyControl: make(chan struct{}, maxConcurrency),
+		baseURL:            baseURL,
 		mu:                 &sync.Mutex{},
+		concurrencyControl: make(chan struct{}, maxConcurrency),
 		wg:                 &sync.WaitGroup{},
-	}
+	}, nil
 }
 
 func (cfg *config) crawlPage(rawCurrentURL string) {
