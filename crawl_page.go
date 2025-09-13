@@ -12,9 +12,10 @@ type config struct {
 	mu                 *sync.Mutex
 	concurrencyControl chan struct{}
 	wg                 *sync.WaitGroup
+	maxPages           int
 }
 
-func configure(rawBaseURL string, maxConcurrency int) (*config, error) {
+func configure(rawBaseURL string, maxConcurrency, maxPages int) (*config, error) {
 	baseURL, err := url.Parse(rawBaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't parse base URL: %v", err)
@@ -26,7 +27,20 @@ func configure(rawBaseURL string, maxConcurrency int) (*config, error) {
 		mu:                 &sync.Mutex{},
 		concurrencyControl: make(chan struct{}, maxConcurrency),
 		wg:                 &sync.WaitGroup{},
+		maxPages:           maxPages,
 	}, nil
+}
+
+func (cfg *config) pageCount() int {
+	cfg.mu.Lock()
+	defer cfg.mu.Unlock()
+
+	var count int
+	for _, v := range cfg.pages {
+		count += v
+	}
+
+	return count
 }
 
 func (cfg *config) crawlPage(rawCurrentURL string) {
@@ -39,14 +53,14 @@ func (cfg *config) crawlPage(rawCurrentURL string) {
 	if err != nil {
 		fmt.Printf("Error - crawlPage: couldn't parse URL '%s': %v\n", rawCurrentURL, err)
 		return
-	} else {
-		fmt.Println("current URL", rawCurrentURL)
 	}
 	// skip other websites
 	if currentURL.Hostname() != cfg.baseURL.Hostname() {
 		return
 	}
-
+	if cfg.pageCount() >= cfg.maxPages {
+		return
+	}
 	normalizedURL, err := url.Parse(rawCurrentURL)
 	if err != nil {
 		fmt.Printf("Error - normalizedURL: %v", err)

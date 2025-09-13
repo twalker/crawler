@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"strconv"
 )
 
 func main() {
@@ -10,16 +12,23 @@ func main() {
 		fmt.Println("no website provided")
 		return
 	}
-	if len(os.Args) > 2 {
+	if len(os.Args) > 4 {
 		fmt.Println("too many arguments provided")
 		return
 	}
 	rawBaseURL := os.Args[1]
+	maxConcurrency, err := strconv.Atoi(os.Args[2])
+	if err != nil {
+		log.Fatal(err)
+	}
+	maxPages, err := strconv.Atoi(os.Args[3])
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	fmt.Printf("starting crawl of: %s...\n", rawBaseURL)
 
-	const maxConcurrency = 3
-	cfg, err := configure(rawBaseURL, maxConcurrency)
+	cfg, err := configure(rawBaseURL, maxConcurrency, maxPages)
 	if err != nil {
 		fmt.Printf("Error - configure: %v", err)
 		return
@@ -30,4 +39,5 @@ func main() {
 	for normalizedURL, count := range cfg.pages {
 		fmt.Printf("%d - %s\n", count, normalizedURL)
 	}
+	fmt.Printf("Total pages visited: %d\n", cfg.pageCount())
 }
