@@ -24,9 +24,9 @@ func main() {
 
 	//cfg.crawlPage(rawBaseURL)
 
-	cfg := NewCrawler(rawBaseURL, 50)
-	cfg.wg.Add(1)
-	go cfg.crawlPage(rawBaseURL)
+	cfg := NewCrawler(rawBaseURL, 5)
+	//cfg.wg.Add(1)
+	cfg.crawlPage(rawBaseURL)
 	cfg.wg.Wait()
 
 	for normalizedURL, count := range cfg.pages {

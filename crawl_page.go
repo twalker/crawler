@@ -33,7 +33,7 @@ func (cfg *config) crawlPage(rawCurrentURL string) {
 	cfg.concurrencyControl <- struct{}{}
 	defer func() {
 		<-cfg.concurrencyControl
-		cfg.wg.Done()
+		//cfg.wg.Done()
 	}()
 	currentURL, err := url.Parse(rawCurrentURL)
 	if err != nil {
@@ -72,8 +72,9 @@ func (cfg *config) crawlPage(rawCurrentURL string) {
 
 	for _, nextURL := range nextURLs {
 		fmt.Println(nextURL)
-		cfg.wg.Add(1)
-		go cfg.crawlPage(nextURL)
+		//cfg.wg.Add(1)
+		//go cfg.crawlPage(nextURL)
+		cfg.wg.Go(func() { cfg.crawlPage(nextURL) })
 	}
 }
 func (cfg *config) addPageVisit(normalizedURL string) (isFirst bool) {
