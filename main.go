@@ -2,9 +2,7 @@ package main
 
 import (
 	"fmt"
-	"net/url"
 	"os"
-	"sync"
 )
 
 func main() {
@@ -17,19 +15,19 @@ func main() {
 		return
 	}
 	rawBaseURL := os.Args[1]
-	baseURL, err := url.Parse(rawBaseURL)
-	if err != nil {
-		fmt.Println("base url could not be parsed:", err)
-	}
+	// baseURL, err := url.Parse(rawBaseURL)
+	// if err != nil {
+	// 	fmt.Println("base url could not be parsed:", err)
+	// }
 
 	fmt.Printf("starting crawl of: %s...\n", rawBaseURL)
-	cfg := config{
-		baseURL:            baseURL,
-		pages:              make(map[string]int),
-		concurrencyControl: make(chan struct{}, 1),
-		mu:                 &sync.Mutex{},
-	}
-	cfg.crawlPage(rawBaseURL)
+
+	//cfg.crawlPage(rawBaseURL)
+
+	cfg := NewCrawler(rawBaseURL, 50)
+	cfg.wg.Add(1)
+	go cfg.crawlPage(rawBaseURL)
+	cfg.wg.Wait()
 
 	for normalizedURL, count := range cfg.pages {
 		fmt.Printf("%d - %s\n", count, normalizedURL)

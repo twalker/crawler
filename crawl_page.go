@@ -14,7 +14,27 @@ type config struct {
 	wg                 *sync.WaitGroup
 }
 
+func NewCrawler(rawBaseURL string, maxConcurrency int) *config {
+	baseURL, err := url.Parse(rawBaseURL)
+	if err != nil {
+		fmt.Println("base url could not be parsed:", err)
+	}
+
+	return &config{
+		baseURL:            baseURL,
+		pages:              make(map[string]int),
+		concurrencyControl: make(chan struct{}, maxConcurrency),
+		mu:                 &sync.Mutex{},
+		wg:                 &sync.WaitGroup{},
+	}
+}
+
 func (cfg *config) crawlPage(rawCurrentURL string) {
+	cfg.concurrencyControl <- struct{}{}
+	defer func() {
+		<-cfg.concurrencyControl
+		cfg.wg.Done()
+	}()
 	currentURL, err := url.Parse(rawCurrentURL)
 	if err != nil {
 		fmt.Printf("Error - crawlPage: couldn't parse URL '%s': %v\n", rawCurrentURL, err)
@@ -27,11 +47,6 @@ func (cfg *config) crawlPage(rawCurrentURL string) {
 		return
 	}
 
-	// normalizedURL, err := normalizeURL(rawCurrentURL)
-	// if err != nil {
-	// 	fmt.Printf("Error - normalizedURL: %v", err)
-	// 	return
-	// }
 	normalizedURL, err := url.Parse(rawCurrentURL)
 	if err != nil {
 		fmt.Printf("Error - normalizedURL: %v", err)
@@ -57,7 +72,8 @@ func (cfg *config) crawlPage(rawCurrentURL string) {
 
 	for _, nextURL := range nextURLs {
 		fmt.Println(nextURL)
-		cfg.crawlPage(nextURL)
+		cfg.wg.Add(1)
+		go cfg.crawlPage(nextURL)
 	}
 }
 func (cfg *config) addPageVisit(normalizedURL string) (isFirst bool) {
